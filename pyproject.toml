@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "kioku-rl"
+version = "0.1.0"
+description = "Cognitive science-inspired reinforcement learning research library"
+readme = "README.md"
+license = { file = "LICENSE" }
+authors = [{ name = "Simon Ashton", email = "simon@smntic.dev" }]
+requires-python = ">=3.10"
+
+dependencies = [
+  "torch",
+  "torchvision",
+  "numpy",
+  "gymnasium",
+  "opencv-python",
+  "pygame",
+  "tensorboard",
+]
+
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: MIT License",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["kioku*"]
