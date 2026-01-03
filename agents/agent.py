@@ -1,12 +1,6 @@
-"""
-agent.py
-
-This file defines the abstract base class for agents.
-"""
-
+from abc import ABC, abstractmethod
 import numpy as np
 from utils import Transition
-from abc import ABC, abstractmethod
 
 
 class Agent(ABC):
@@ -18,9 +12,7 @@ class Agent(ABC):
     """
 
     @abstractmethod
-    def act(
-        self, observation: np.ndarray, state: dict | None = None
-    ) -> tuple[np.ndarray, dict | None]:
+    def act(self, observation: np.ndarray, state: dict | None = None) -> tuple[np.ndarray, dict | None]:
         """Choose an action based on the current observation.
 
         Args:
@@ -28,9 +20,7 @@ class Agent(ABC):
             state (dict | None, optional): The inner state of the agent. Defaults to None.
 
         Returns:
-            tuple[np.ndarray, dict | None]: A tuple containing:
-                - The action to take (np.ndarray).
-                - The new state of the agent (dict | None).
+            tuple[np.ndarray, dict | None]: A tuple containing: the action to take, and the new state.
         """
         pass
 
@@ -51,14 +41,10 @@ class Agent(ABC):
 
     @abstractmethod
     def train(self) -> None:
-        """Set the agent to training mode, where it actively learns from interactions with the
-        environment.
-        """
+        """Set the agent to training mode, in which it learns from interactions with the environment."""
         pass
 
     @abstractmethod
     def test(self) -> None:
-        """Set the agent to testing mode, where it behaves according to the learned policy without
-        further training.
-        """
+        """Set the agent to testing mode, in which it follows the current policy without further training."""
         pass

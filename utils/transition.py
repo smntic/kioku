@@ -1,12 +1,3 @@
-"""
-transition.py
-
-The Transition object is used to store transitions involving the environment and agent states.
-
-It stores information in key-value pairs and allows filtering and retrieving information
-based on their keys.
-"""
-
 import torch
 import numpy as np
 
@@ -16,19 +7,6 @@ class Transition:
 
     This class is used to store a transition, which includes observations, actions, and other related data
     collected during the interaction between the agent and environment.
-
-    Attributes:
-        _data (dict): A dictionary that stores the data of the transition in key-value pairs. The values
-                      can be either numpy arrays or torch tensors.
-
-    Methods:
-        __init__(**kwargs): Initializes the transition object with the given data.
-        combine(transitions): Combines a batch of transitions into a single transition object.
-        filter(*keys): Filters the transition object to include the specified keys.
-        keys(): Returns a list of all the keys in the transition object.
-        __add__(other): Adds the data of two transition objects, combining them.
-        __getitem__(keys): Retrieves the data stored in the transition object by key(s).
-        __repr__(): Returns a string representation of the transition object.
     """
 
     def __init__(self, **kwargs: dict[str, np.ndarray | torch.Tensor]) -> None:
@@ -45,15 +23,11 @@ class Transition:
 
         for key, value in kwargs.items():
             if not isinstance(value, (np.ndarray, torch.Tensor)):
-                raise TypeError(
-                    f"Expected np.ndarray or torch.Tensor for '{value}', got '{type(value)}' instead."
-                )
+                raise TypeError(f"Expected np.ndarray or torch.Tensor for '{value}', got '{type(value)}' instead.")
             self._data[key] = value
 
     @classmethod
-    def combine(
-        cls, transitions: list["Transition"] | np.ndarray["Transition"]
-    ) -> "Transition":
+    def combine(cls, transitions: list["Transition"] | np.ndarray["Transition"]) -> "Transition":
         """Combines a batch of transitions into a single transition object.
 
         Args:
@@ -74,7 +48,8 @@ class Transition:
         for key in transitions[0].keys():
             if isinstance(transitions[0][key], torch.Tensor):
                 batch_data[key] = torch.stack([t[key] for t in transitions], dim=0)
-            else:  # we can assume it's a numpy array, because of the __init__ check
+            else:
+                # we can assume it's a numpy array because of the check in __init__
                 batch_data[key] = np.stack([t[key] for t in transitions], axis=0)
         return Transition(**batch_data)
 
@@ -126,19 +101,13 @@ class Transition:
         combined_data = {}
         for key in self._data.keys():
             if isinstance(self._data[key], np.ndarray):
-                combined_data[key] = np.concatenate(
-                    (self._data[key], other._data[key]), axis=0
-                )
+                combined_data[key] = np.concatenate((self._data[key], other._data[key]), axis=0)
             elif isinstance(self._data[key], torch.Tensor):
-                combined_data[key] = torch.cat(
-                    (self._data[key], other._data[key]), dim=0
-                )
+                combined_data[key] = torch.cat((self._data[key], other._data[key]), dim=0)
 
         return Transition(**combined_data)
 
-    def __getitem__(
-        self, keys: str | list[str]
-    ) -> np.ndarray | tuple[np.ndarray, ...]:
+    def __getitem__(self, keys: str | list[str]) -> np.ndarray | tuple[np.ndarray, ...]:
         """Retrieves the data stored in the transition object.
 
         If a single key is provided, the corresponding data is returned. If multiple keys are

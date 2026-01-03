@@ -1,23 +1,10 @@
-"""
-experience_replay_buffer.py
-
-This module contains the definition of an experience replay buffer.
-"""
-
 from utils import Transition
 from loggers import Logger
 import numpy as np
 
 
 class ExperienceReplayBuffer:
-    """A class used to represent an Experience Replay Buffer.
-
-    Attributes:
-        _max_size (int): The maximum size of the buffer.
-        _full (bool): Whether the buffer is full or not.
-        _data (np.ndarray[Transition]): The data stored in the buffer.
-        _data_index (int): The index of the data in the buffer.
-    """
+    """A class used to represent an Experience Replay Buffer."""
 
     def __init__(self, max_size: int = 1000000, batch_size: int = 32) -> None:
         """Initializes the Experience Replay Buffer.
@@ -43,7 +30,6 @@ class ExperienceReplayBuffer:
         self._data[self._data_index] = transition
         self._advance_index()
 
-        # Log the current buffer size
         Logger.log_scalar("experience_replay_buffer/buffer_size", len(self))
 
     def sample(self) -> Transition:
@@ -56,15 +42,10 @@ class ExperienceReplayBuffer:
             Transition: A batch of transitions with combined data.
         """
         if not self.can_sample():
-            raise ValueError(
-                "Not enough transitions in the buffer to sample a full batch."
-            )
+            raise ValueError("Not enough transitions in the buffer to sample a full batch.")
 
-        # Randomly choose _batch_size indices from the buffer
         indices = np.random.choice(len(self), self._batch_size, replace=False)
         chosen_transitions = self._data[indices]
-
-        # Combine the chosen transitions into a single batch transition
         batch_transition = Transition.combine(chosen_transitions)
         return batch_transition
 
@@ -79,8 +60,7 @@ class ExperienceReplayBuffer:
     def _advance_index(self) -> None:
         """Advance the data index pointer by one.
 
-        This is a circular buffer:
-        if the pointer exceeds the maximum size, reset it to 0 and set the buffer to full.
+        This is a circular buffer. If the pointer exceeds the maximum index, reset it to 0 and set the buffer to full.
         """
         self._data_index += 1
         if self._data_index >= self._max_size:

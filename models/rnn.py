@@ -1,9 +1,3 @@
-"""
-rnn.py
-
-This module contains the definition of a Recurrent Neural Network (RNN) model.
-"""
-
 from utils import DEVICE
 import torch
 import torch.nn.functional as F
@@ -36,10 +30,8 @@ class RNN(nn.Module):
         """
         super().__init__()
 
-        # Define the layer sizes of the ntire network
         fully_connected_layer_sizes = [input_size] + hidden_sizes + [output_size]
 
-        # Create the RNN layer
         self.rnn = nn.RNN(
             input_size=fully_connected_layer_sizes[-1],
             hidden_size=inner_state_size,
@@ -47,14 +39,9 @@ class RNN(nn.Module):
             batch_first=True,
         )
 
-        # Create the linear layers
         self.fully_connected_layers = nn.ModuleList()
         for i in range(len(fully_connected_layer_sizes) - 1):
-            self.fully_connected_layers.append(
-                nn.Linear(
-                    fully_connected_layer_sizes[i], fully_connected_layer_sizes[i + 1]
-                )
-            )
+            self.fully_connected_layers.append(nn.Linear(fully_connected_layer_sizes[i], fully_connected_layer_sizes[i + 1]))
 
     def forward(
         self, x: Any, state: torch.Tensor | None = None
@@ -74,12 +61,8 @@ class RNN(nn.Module):
 
         if state is None:
             state = torch.zeros(1, x.size(0), self.rnn.hidden_size)
-
-        # Pass the input through the layers
         for layer in self.fully_connected_layers[:-1]:
             x = F.relu(layer(x))
-
-        # Pass the output through the final layer
         x = self.fully_connected_layers[-1](x)
 
         return x

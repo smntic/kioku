@@ -1,10 +1,3 @@
-"""
-discrete_actor.py
-
-This module contains the DiscreteActor class, which is an implementation of an actor for discrete
-action spaces.
-"""
-
 from models import MLP
 from schedulers import Scheduler, StaticScheduler
 from utils import DEVICE
@@ -19,9 +12,6 @@ class DiscreteActor:
 
     Attributes:
         model (MLP): The model used to predict the action probabilities.
-        _optimizer (torch.optim.Adam): The optimizer.
-        _learning_rate (Scheduler): The learning rate scheduler.
-        _gradient_clipping (float): The maximum gradient norm for clipping
     """
 
     def __init__(
@@ -45,12 +35,9 @@ class DiscreteActor:
             gradient_clipping (float): The maximum gradient norm for clipping.
         """
 
-        # Create the model to predict the action probabilities
         self.model = MLP(observation_size, num_actions, hidden_sizes).to(DEVICE)
         if create_optimizer:
-            self._optimizer = torch.optim.Adam(
-                self.model.parameters(), lr=self._learning_rate.value(0)
-            )
+            self._optimizer = torch.optim.Adam(self.model.parameters(), lr=learning_rate.value(0))
             self._learning_rate = learning_rate
             self._gradient_clipping = gradient_clipping
         else:
@@ -67,10 +54,8 @@ class DiscreteActor:
         Returns:
             tuple[torch.Tensor, torch.Tensor]: The action and the log probability of the action.
         """
-        # Get the action probabilities from the model
         logits = self.model(observation)
 
-        # Create a distribution from the action probabilities
         action_dist = Categorical(logits=logits)
         action = action_dist.sample()
         action_log_prob = action_dist.log_prob(action)
@@ -87,10 +72,8 @@ class DiscreteActor:
         Returns:
             torch.Tensor: The log probability of taking the action.
         """
-        # Get the action probabilities from the model
         logits = self.model(observation)
 
-        # Create a distribution from the action probabilities
         action_dist = Categorical(logits=logits)
         action_log_prob = action_dist.log_prob(action)
 
@@ -103,14 +86,10 @@ class DiscreteActor:
             actor_loss (torch.Tensor): The loss of the actor model.
             step (int): The current step.
         """
-        # If the optimizer is not created, raise an error
         if self._optimizer is None:
             raise ValueError("The optimizer was not created.")
 
-        # Update the optimizer learning rate
         self._learning_rate.adjust(self._optimizer, step)
-
-        # Optimize the model
         self._optimizer.zero_grad()
         loss.backward()
         torch.nn.utils.clip_grad_norm_(
@@ -118,17 +97,8 @@ class DiscreteActor:
         )
         self._optimizer.step()
 
-        # Log the learning rate
+        average_grad_norm = np.mean([torch.norm(param.grad).item() for param in self.model.parameters() if param.grad is not None])
         Logger.log_scalar("actor/learning_rate", self._learning_rate.value(step))
-
-        # Log the model gradients
-        average_grad_norm = np.mean(
-            [
-                torch.norm(param.grad).item()
-                for param in self.model.parameters()
-                if param.grad is not None
-            ]
-        )
         Logger.log_scalar("actor/gradient_norm", average_grad_norm)
 
     def train(self) -> None:

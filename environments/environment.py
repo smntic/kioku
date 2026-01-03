@@ -1,16 +1,9 @@
-"""
-environment.py
-
-This module contains the abstract base class for an environment.
-"""
-
 from abc import ABC, abstractmethod
 import numpy as np
 
 
 class Environment(ABC):
-    """
-    Abstract base class for an environment.
+    """Abstract base class for an environment.
 
     Attributes:
         action_size (int): The number of actions that can be taken.
@@ -29,11 +22,8 @@ class Environment(ABC):
         pass
 
     @abstractmethod
-    def step(
-        self, action: np.ndarray
-    ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-        """
-        Takes a step in the environment.
+    def step(self, action: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+        """Take a step in the environment.
 
         Args:
             action (int): The action to take.

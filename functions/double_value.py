@@ -1,10 +1,3 @@
-"""
-double_value.py
-
-This module contains the definition of a simple double value network.
-One network is the online network and the other is the target network.
-"""
-
 from models import MLP
 from schedulers import Scheduler, StaticScheduler
 from utils import DEVICE
@@ -17,17 +10,6 @@ class DoubleValue:
     """A simple Double Value network.
 
     This network could be used for the Q and V functions, or any other value function.
-
-    Attributes:
-        _online_network (MLP): The online network.
-        _target_network (MLP): The target network.
-        _optimizer (optim.Adam): The optimizer.
-        _transition_rate (float): The rate at which the target network transitions to the online
-
-
-        Args:
-            target_network (MLP): The target network to update.
-            online_network (MLP): The online network to transition from.
     """
 
     def __init__(
@@ -52,10 +34,7 @@ class DoubleValue:
         self._target_network = MLP(input_size, output_size, hidden_sizes).to(DEVICE)
         self._copy_online_to_target()
 
-        self._optimizer = optim.Adam(
-            self._online_network.parameters(), lr=learning_rate.value(0)
-        )
-
+        self._optimizer = optim.Adam(self._online_network.parameters(), lr=learning_rate.value(0))
         self._learning_rate = learning_rate
         self._transition_rate = transition_rate
         self._gradient_clipping = gradient_clipping
@@ -81,28 +60,18 @@ class DoubleValue:
             loss (torch.Tensor): The loss tensor to backpropagate.
             step (int): The current step.
         """
-        # Update the optimizer learning rate
         self._learning_rate.adjust(self._optimizer, step)
-
-        # Optimize the online network
         self._optimizer.zero_grad()
         loss.backward()
-        torch.nn.utils.clip_grad_norm_(
-            self._online_network.parameters(), max_norm=self._gradient_clipping
-        )
+        torch.nn.utils.clip_grad_norm_(self._online_network.parameters(), max_norm=self._gradient_clipping)
         self._optimizer.step()
-
-        # Update the target network
         self._update_target_network()
 
-        # Log the learning rate
-        Logger.log_scalar("double_value/learning_rate", self._learning_rate.value(step))
-
-        # Log the gradients
         avg_gradient = 0
         for param in self._online_network.parameters():
             avg_gradient += param.grad.abs().mean()
         avg_gradient /= len(list(self._online_network.parameters()))
+        Logger.log_scalar("double_value/learning_rate", self._learning_rate.value(step))
         Logger.log_scalar("double_value/gradient", avg_gradient)
 
     def _update_target_network(self) -> None:
@@ -110,10 +79,7 @@ class DoubleValue:
         target_state_dict = self._target_network.state_dict()
         online_state_dict = self._online_network.state_dict()
         for key in target_state_dict:
-            target_state_dict[key] = (
-                self._transition_rate * online_state_dict[key]
-                + (1 - self._transition_rate) * target_state_dict[key]
-            )
+            target_state_dict[key] = self._transition_rate*online_state_dict[key] + (1-self._transition_rate)*target_state_dict[key]
         self._target_network.load_state_dict(target_state_dict)
 
     def _copy_online_to_target(self) -> None:

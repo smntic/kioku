@@ -1,9 +1,3 @@
-"""
-value.py
-
-This module contains the definition of a value function approximator class, Value.
-"""
-
 from models import MLP
 from schedulers import Scheduler, StaticScheduler
 from utils import DEVICE
@@ -19,9 +13,6 @@ class Value:
 
     Attributes:
         model (MLP): The online network used for value estimation.
-        _optimizer (optim.Adam): The optimizer.
-        _learning_rate (Scheduler): The learning rate scheduler.
-        _gradient_clipping (float): The maximum gradient norm for clipping.
     """
 
     def __init__(
@@ -45,9 +36,7 @@ class Value:
         """
         self.model = MLP(input_size, output_size, hidden_sizes).to(DEVICE)
         if create_optimizer:
-            self._optimizer = optim.Adam(
-                self.model.parameters(), lr=learning_rate.value(0)
-            )
+            self._optimizer = optim.Adam(self.model.parameters(), lr=learning_rate.value(0))
             self._learning_rate = learning_rate
             self._gradient_clipping = gradient_clipping
         else:
@@ -73,28 +62,19 @@ class Value:
             loss (torch.Tensor): The loss tensor to backpropagate.
             step (int): The current training step.
         """
-        # If the optimizer is not created, raise an error
         if self._optimizer is None:
             raise ValueError("The optimizer was not created.")
 
-        # Update the optimizer learning rate
         self._learning_rate.adjust(self._optimizer, step)
-
-        # Optimize the network
         self._optimizer.zero_grad()
         loss.backward()
-        torch.nn.utils.clip_grad_norm_(
-            self.model.parameters(), max_norm=self._gradient_clipping
-        )
+        torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=self._gradient_clipping)
         self._optimizer.step()
 
-        # Log the learning rate
-        Logger.log_scalar("value/learning_rate", self._learning_rate.value(step))
-
-        # Log the average gradient magnitude
         avg_gradient = sum(
             p.grad.abs().mean() for p in self.model.parameters()
         ) / len(list(self.model.parameters()))
+        Logger.log_scalar("value/learning_rate", self._learning_rate.value(step))
         Logger.log_scalar("value/gradient", avg_gradient)
 
     def train(self) -> None:

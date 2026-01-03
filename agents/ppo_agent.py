@@ -1,10 +1,3 @@
-"""
-ppo_agent.py
-
-This module contains the PPOAgent class,
-which is an implementation of the Proximal Policy Optimization (PPO) algorithm.
-"""
-
 from agents import Agent
 from memory import NStepBuffer
 from functions import DiscreteActor, Value
@@ -21,22 +14,7 @@ import numpy as np
 class PPOAgent(Agent):
     """An implementation of the Proximal Policy Optimization (PPO) algorithm.
 
-    Attributes:
-        _actor (DiscreteActor): The actor network.
-        _critic (Value): The critic network.
-        _feature_extractor (FeatureExtractor): The feature extractor for the agent, or None.
-        _optimizer (torch.optim.Optimizer): The shared optimizer for the actor and critic.
-        _learning_rate (Scheduler): The learning rate scheduler for the optimizer.
-        _gradient_clipping (float): The max gradient norm for the agent's models.
-        _n_steps (int): The number of steps to use for n-step returns.
-        _n_step_buffer (NStepBuffer): The buffer to store n-step transitions.
-        _relevant_keys (list[str]): The keys to keep when processing transitions.
-        _gamma (float): The discount factor for future rewards.
-        _lambda (float): The GAE lambda parameter.
-        _critic_coefficient (float): The coefficient for the critic loss.
-        _entropy_coefficient (float): The coefficient for the entropy term in the actor loss.
-        _normalize_advantages (bool): Whether to normalize the advantages.
-        _step (int): The current training step.
+    See: https://arxiv.org/abs/1707.06347
     """
 
     def __init__(
@@ -85,10 +63,16 @@ class PPOAgent(Agent):
         self._feature_extractor = feature_extractor
 
         self._actor = DiscreteActor(
-            observation_size, num_actions, actor_hidden_sizes, create_optimizer=False
+            observation_size=observation_size,
+            num_actions=num_actions,
+            hidden_sizes=actor_hidden_sizes,
+            create_optimizer=False
         )
         self._critic = Value(
-            observation_size, 1, critic_hidden_sizes, create_optimizer=False
+            input_size=observation_size,
+            output_size=1,
+            hidden_sizes=critic_hidden_sizes,
+            create_optimizer=False
         )
 
         # Create a shared optimizer for the actor, critic, and feature extractor
@@ -136,7 +120,6 @@ class PPOAgent(Agent):
         Returns:
             tuple[np.ndarray, dict | None]: The action to take, and the new state of the agent.
         """
-        # Update the current step
         self._step += 1
 
         return self._choose_action(observation, state)
@@ -156,22 +139,15 @@ class PPOAgent(Agent):
         Returns:
             tuple[np.ndarray, dict | None]: The action to take, and the new state of the agent.
         """
-        # Extract features if a feature extractor is provided
         if self._feature_extractor is not None:
             observation = self._feature_extractor(observation)
 
-        # Get the action from the actor
         action, action_log_prob = self._actor.act(observation)
         action_log_prob = action_log_prob.unsqueeze(-1)
         action_entropy = -action_log_prob * torch.exp(action_log_prob)
-
-        # Convert the action to a numpy array
         action = action.cpu().numpy()
 
-        return action, {
-            "action_log_prob": action_log_prob,
-            "action_entropy": action_entropy,
-        }
+        return action, { "action_log_prob": action_log_prob, "action_entropy": action_entropy }
 
     def _log_prob(
         self, observation: np.ndarray, action: np.ndarray, state: dict | None = None
@@ -189,9 +165,7 @@ class PPOAgent(Agent):
         Returns:
             torch.Tensor: The log probability of taking the action.
         """
-        # Get the log prob from the actor
         action_log_prob = self._actor.log_prob(observation, action)
-
         return action_log_prob
 
     def process_transition(self, transition: Transition) -> None:
@@ -208,53 +182,39 @@ class PPOAgent(Agent):
         if not self._n_step_buffer.can_sample():
             return
 
-        # Get the batch of transitions
         batch_transition = self._n_step_buffer.sample()
         observation, action, reward, next_observation, done, action_log_prob = (
             batch_transition[self._relevant_keys]
         )
-
-        # Convert to tensors when necessary
         observation = torch.tensor(observation, dtype=torch.float32).to(DEVICE)
         action = torch.tensor(action, dtype=torch.float32).to(DEVICE)
         reward = torch.tensor(reward, dtype=torch.float32).squeeze().to(DEVICE)
         next_observation = torch.tensor(next_observation, dtype=torch.float32).to(DEVICE)
         done = torch.tensor(done, dtype=torch.bool).squeeze().to(DEVICE)
+        action_log_prob = action_log_prob.squeeze()
 
-        # Extract features if a feature extractor is provided
         if self._feature_extractor is not None:
             observation_features = self._feature_extractor(observation)
             next_observation_features = self._feature_extractor(next_observation)
 
-            # Compute the value estimates
             value_estimate = self._critic.predict(observation_features).squeeze()
             next_value_estimate = self._critic.predict(next_observation_features).squeeze()
         else:
-            # Compute the value estimates
             value_estimate = self._critic.predict(observation).squeeze()
             next_value_estimate = self._critic.predict(next_observation).squeeze()
 
-        # Compute GAE advantages
         advantage = self._compute_gae(
             reward, value_estimate.detach(), next_value_estimate.detach(), done
         )
-
-        # (Optionally) normalize the advantages
         if self._normalize_advantages:
             advantage = (advantage - advantage.mean()) / (advantage.std() + 1e-8)
 
-        # Compute targets for the critic (returns)
         returns = advantage + value_estimate.detach()
 
-        # Squeeze the action log probabilities
-        action_log_prob = action_log_prob.squeeze()
-
-        # Cumulate loss values
         total_actor_loss = 0
         total_entropy_loss = 0
         total_critic_loss = 0
 
-        # Create dataset for mini-batch training
         batch_size = self._n_steps // self._n_mini_batches
 
         dataset = TensorDataset(
@@ -277,56 +237,43 @@ class PPOAgent(Agent):
                     action_log_prob,
                 ) = mini_batch
 
-                # Extract features if a feature extractor is provided
                 if self._feature_extractor is not None:
                     observation = self._feature_extractor(observation)
 
-                # Compute the new action log probabilities
                 new_action_log_prob = self._log_prob(observation, action)
                 new_action_entropy = new_action_log_prob * -torch.exp(
                     new_action_log_prob
                 )
-
-                # Squeeze the action log probabilities
                 new_action_log_prob = new_action_log_prob.squeeze()
 
-                # Compute ratios
                 ratio = torch.exp(new_action_log_prob - action_log_prob.detach())
                 clipped_ratio = torch.clamp(
                     ratio, 1 - self._surrogate_clipping, 1 + self._surrogate_clipping
                 )
 
-                # Compute the actor loss
                 entropy_loss = self._entropy_coefficient * -new_action_entropy.mean()
                 actor_loss = -torch.min(
                     new_action_log_prob * advantage, clipped_ratio * advantage
                 ).mean()
                 actor_loss = actor_loss - entropy_loss
 
-                # Compute value estimates
                 value_estimate = self._critic.predict(observation).squeeze()
-
-                # Compute the critic loss
                 critic_loss = self._critic_coefficient * F.mse_loss(
                     value_estimate, returns
                 )
 
-                # Optimize the models
                 total_loss = actor_loss + critic_loss
                 self._optimize(total_loss)
 
-                # Add loss values
                 total_actor_loss += actor_loss
                 total_entropy_loss += entropy_loss
                 total_critic_loss += critic_loss
 
-        # Compute average loss values
         total_learning_steps = self._n_training_steps * self._n_mini_batches
         avg_actor_loss = total_actor_loss / total_learning_steps
         avg_entropy_loss = total_entropy_loss / total_learning_steps
         avg_critic_loss = total_critic_loss / total_learning_steps
 
-        # Log the training process
         Logger.log_scalar("ppo_agent/actor_loss", avg_actor_loss)
         Logger.log_scalar("ppo_agent/entropy_loss", avg_entropy_loss)
         Logger.log_scalar("ppo_agent/critic_loss", avg_critic_loss)
@@ -336,15 +283,9 @@ class PPOAgent(Agent):
         Logger.log_scalar("ppo_agent/value_estimate/max", value_estimate.max())
         Logger.log_scalar("ppo_agent/value_estimate/min", value_estimate.min())
         Logger.log_scalar("ppo_agent/value_estimate/mean", value_estimate.mean())
-        Logger.log_scalar(
-            "ppo_agent/next_value_estimate/max", next_value_estimate.max()
-        )
-        Logger.log_scalar(
-            "ppo_agent/next_value_estimate/min", next_value_estimate.min()
-        )
-        Logger.log_scalar(
-            "ppo_agent/next_value_estimate/mean", next_value_estimate.mean()
-        )
+        Logger.log_scalar("ppo_agent/next_value_estimate/max", next_value_estimate.max())
+        Logger.log_scalar("ppo_agent/next_value_estimate/min", next_value_estimate.min())
+        Logger.log_scalar("ppo_agent/next_value_estimate/mean", next_value_estimate.mean())
         Logger.log_scalar("ppo_agent/returns/max", returns.max())
         Logger.log_scalar("ppo_agent/returns/min", returns.min())
         Logger.log_scalar("ppo_agent/returns/mean", returns.mean())
@@ -367,10 +308,7 @@ class PPOAgent(Agent):
         Returns:
             torch.Tensor: The computed advantages.
         """
-        # Compute TD errors
         td_errors = rewards + self._gamma * next_values * (~dones) - values
-
-        # GAE computation
         advantage = 0
         advantages = torch.zeros_like(rewards, dtype=torch.float32)
         for t in reversed(range(self._n_steps)):
@@ -386,30 +324,14 @@ class PPOAgent(Agent):
             loss (torch.Tensor): The loss tensor to backpropagate.
         """
 
-        # Update the optimizer learning rate
         self._learning_rate.adjust(self._optimizer, self._step)
-
-        # Optimize the models
         self._optimizer.zero_grad()
         loss.backward()
-        torch.nn.utils.clip_grad_norm_(
-            self._total_parameters(),
-            self._gradient_clipping,
-        )
+        torch.nn.utils.clip_grad_norm_(self._total_parameters(), self._gradient_clipping)
         self._optimizer.step()
 
-        # Log the learning rate
-        Logger.log_scalar(
-            "ppo_agent/learning_rate", self._learning_rate.value(self._step)
-        )
-
-        # Log the model gradients
-        average_grad_norm = np.mean(
-            [
-                p.grad.norm(2).item()
-                for p in self._total_parameters()
-            ]
-        )
+        average_grad_norm = np.mean([p.grad.norm(2).item() for p in self._total_parameters()])
+        Logger.log_scalar("ppo_agent/learning_rate", self._learning_rate.value(self._step))
         Logger.log_scalar("ppo_agent/gradient", average_grad_norm)
 
     def _total_parameters(self) -> list:

@@ -1,12 +1,6 @@
-"""
-visual_gym_environment.py
-
-Provides a wrapper for the a visual gymnasium environment to be interacted with by an agent.
-"""
-
 import numpy as np
-from environments import Environment, GymEnvironment
 import cv2
+from environments import Environment, GymEnvironment
 
 
 class VisualGymEnvironment(Environment):
@@ -18,11 +12,6 @@ class VisualGymEnvironment(Environment):
         action_size (int): The number of actions that can be taken.
         observation_size (int | tuple[int, int, int]): The dimension of the observation space.
         continuous (bool): Whether the environment has a continuous action space.
-        _environment_wrapper (GymEnvironment): The environment wrapper.
-        _greyscale (bool): Whether to convert the view to greyscale.
-        _resolution (tuple[int, int]): The resolution of the view.
-        _prev_view (np.ndarray): The previous view of the environment.
-        _render (bool): Whether to render the environment.
     """
 
     def __init__(self, environment_name: str, render: bool = False, greyscale: bool = False, resolution: tuple[int, int] = (64, 64)) -> None:
@@ -32,7 +21,6 @@ class VisualGymEnvironment(Environment):
             environment_name (str): The name of the environment.
             render (bool): Whether to render the environment in a window.
         """
-        # Create the gym environment
         self._environment_wrapper = GymEnvironment(
             environment_name, render_mode="rgb_array"
         )
@@ -68,12 +56,7 @@ class VisualGymEnvironment(Environment):
                 - Whether the episode is done (np.ndarray),
                 - Whether the episode was truncated (np.ndarray).
         """
-        (
-            _,
-            reward,
-            done,
-            truncated,
-        ) = self._environment_wrapper.step(action)
+        _, reward, done, truncated = self._environment_wrapper.step(action)
         return self._get_frame(), reward, done, truncated
 
     def _get_frame(self) -> np.ndarray:
@@ -82,25 +65,14 @@ class VisualGymEnvironment(Environment):
         Returns:
             np.ndarray: The current frame of the environment.
         """
-        # Get the view from the environment
         view = self._environment_wrapper._environment.render()
         
-        # Render the environment
         if self._render:
             bgr_view = cv2.cvtColor(view, cv2.COLOR_RGB2BGR)
             cv2.imshow("Environment", bgr_view)
             cv2.waitKey(1)
 
-        # Transform the view
         view = self._transform(view)
-
-        # Render the agent's view (for debugging)
-        # _view = view.transpose(1, 2, 0)
-        # _view = np.concatenate((_view, np.zeros((*_view.shape[:2], 1), dtype=_view.dtype)), axis=2)
-        # _view = cv2.resize(_view, (1024, 1024), cv2.INTER_NEAREST)
-        # cv2.imshow("Environment", _view)
-        # cv2.waitKey(1)
-
         return view
 
     def _transform(self, view: np.ndarray) -> np.ndarray:
@@ -112,14 +84,9 @@ class VisualGymEnvironment(Environment):
         Returns:
             np.ndarray: The transformed view.
         """
-        # Normalize the view
         view = (view / 255.0).astype(np.float32)
-
-        # Convert the view to greyscale
         if self._greyscale:
             view = cv2.cvtColor(view, cv2.COLOR_RGB2GRAY)
-
-        # Resize the view
         view = cv2.resize(view, self._resolution)
 
         # Permute the dimensions

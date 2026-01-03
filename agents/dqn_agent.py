@@ -1,9 +1,3 @@
-"""
-dqn_agent.py
-
-This file contains the implementation of the DQN agent.
-"""
-
 from agents import Agent
 from memory import ExperienceReplayBuffer
 from functions import DoubleValue
@@ -18,15 +12,7 @@ import numpy as np
 class DQNAgent(Agent):
     """A Deep Q-Network (DQN) agent.
 
-    Attributes:
-        _epsilon (Scheduler): The probability of taking a random action (exploration).
-        _gamma (float): The discount factor for future rewards.
-        _model (DoubleQ): The Q model used to estimate action values.
-        _num_actions (int): The number of actions the agent can take.
-        _batch_size (int): The number of experiences used per training batch.
-        _memory (ExperienceReplayBuffer): The buffer storing past experiences for training.
-        _relevant_keys (list[str]): The keys of the relevant information in a transition.
-        _steps (int): The total number of steps the agent has taken during training.
+    See: https://arxiv.org/abs/1312.5602
     """
 
     def __init__(
@@ -34,8 +20,8 @@ class DQNAgent(Agent):
         observation_size: int,
         num_actions: int,
         hidden_sizes: list[int] = [32, 32],
-        learning_rate: Scheduler = StaticScheduler(1e-2, 0),
-        epsilon: Scheduler = ExponentialDecayScheduler(1, 0.01, 5000, 0),
+        learning_rate: Scheduler = StaticScheduler(1e-3, 0),
+        epsilon: Scheduler = ExponentialDecayScheduler(1, 0.01, 3000, 0),
         gamma: float = 0.99,
         transition_rate: float = 0.005,
         memory_size: int = 5000,
@@ -81,9 +67,7 @@ class DQNAgent(Agent):
 
         self._step = 0
 
-    def act(
-        self, observation: np.ndarray, state: dict = None
-    ) -> tuple[np.ndarray, dict | None]:
+    def act(self, observation: np.ndarray, state: dict = None) -> tuple[np.ndarray, dict | None]:
         """Choose an action based on the current observation.
 
         Args:
@@ -91,14 +75,14 @@ class DQNAgent(Agent):
             state (dict | None): The state of the agent.
 
         Returns:
-            tuple[np.ndarray, dict | None]: The action to take, and the new state of the agent.
+            tuple[np.ndarray, dict | None]: The action to take, and the new state.
         """
         self._step += 1
 
         chosen_action = None
         epsilon_value = self._epsilon.value(self._step)
+
         if np.random.rand() < epsilon_value:
-            # Select a random action
             chosen_action = np.random.randint(self._num_actions)
         else:
             # Select the action with the highest predicted q value
@@ -109,7 +93,6 @@ class DQNAgent(Agent):
 
         chosen_action = np.array([chosen_action])
 
-        # Log the epsilon value
         Logger.log_scalar("dqn_agent/epsilon", epsilon_value)
 
         return chosen_action, state
@@ -142,9 +125,7 @@ class DQNAgent(Agent):
         target_q_values = (
             self._model.predict(next_observation, target=True).max(dim=1).values
         )
-        target_q_values = reward.squeeze(dim=1) + self._gamma * target_q_values * (
-            1 - done.squeeze(dim=1)
-        )
+        target_q_values = reward.squeeze(dim=1) + self._gamma*target_q_values*(1-done.squeeze(dim=1))
 
         current_q_values = self._model.predict(observation)
         current_q_values = current_q_values.gather(1, action).squeeze(dim=1)
@@ -153,16 +134,13 @@ class DQNAgent(Agent):
 
         self._model.optimize(q_loss, self._step)
 
-        # Log the learning process
         Logger.log_scalar("dqn_agent/loss", q_loss.item())
         Logger.log_scalar("dqn_agent/pred_q_value/max", current_q_values.max().item())
         Logger.log_scalar("dqn_agent/pred_q_value/min", current_q_values.min().item())
         Logger.log_scalar("dqn_agent/pred_q_value/mean", current_q_values.mean().item())
         Logger.log_scalar("dqn_agent/target_q_value/max", target_q_values.max().item())
         Logger.log_scalar("dqn_agent/target_q_value/min", target_q_values.min().item())
-        Logger.log_scalar(
-            "dqn_agent/target_q_value/mean", target_q_values.mean().item()
-        )
+        Logger.log_scalar("dqn_agent/target_q_value/mean", target_q_values.mean().item())
 
     def train(self) -> None:
         """Set the agent to training mode."""

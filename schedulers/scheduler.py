@@ -1,11 +1,5 @@
-"""
-scheduler.py
-
-This file contains the abstract class for a scheduler.
-"""
-
-import torch
 from abc import ABC, abstractmethod
+import torch
 
 
 class Scheduler(ABC):

@@ -1,10 +1,3 @@
-"""
-min_double_value.py
-
-This module contains the definition of the MinDoubleValue class
-that combines two value networks, each with a critic, and takes the minimum of their outputs.
-"""
-
 from models import MLP
 from schedulers import Scheduler, StaticScheduler
 from utils import DEVICE
@@ -19,16 +12,7 @@ class MinDoubleValue:
 
     It manages the optimization of both networks and their target network transitions.
 
-    Attributes:
-        _online_network_1 (MLP): The first online network.
-        _online_network_2 (MLP): The second online network.
-        _target_network_1 (MLP): The first target network.
-        _target_network_2 (MLP): The second target network.
-        _optimizer_1 (optim.Adam): The optimizer for the first network.
-        _optimizer_2 (optim.Adam): The optimizer for the second network.
-        _learning_rate (Scheduler): The learning rate scheduler.
-        _transition_rate (float): The rate at which target networks transition.
-        _gradient_clipping (float): Maximum gradient norm for clipping.
+    See: https://arxiv.org/pdf/1509.06461
     """
 
     def __init__(
@@ -50,20 +34,14 @@ class MinDoubleValue:
             transition_rate (float): The rate at which target networks transition.
             gradient_clipping (float): The maximum gradient norm for clipping.
         """
-        # Initialize the networks
         self._online_network_1 = MLP(input_size, output_size, hidden_sizes).to(DEVICE)
         self._online_network_2 = MLP(input_size, output_size, hidden_sizes).to(DEVICE)
-
         self._target_network_1 = MLP(input_size, output_size, hidden_sizes).to(DEVICE)
         self._target_network_2 = MLP(input_size, output_size, hidden_sizes).to(DEVICE)
-
-        # Copy the online networks to the target networks initially
         self._copy_online_to_target()
 
-        # Initialize optimizers
         self._optimizer = optim.Adam(
-            list(self._online_network_1.parameters())
-            + list(self._online_network_2.parameters()),
+            list(self._online_network_1.parameters()) + list(self._online_network_2.parameters()),
             lr=learning_rate.value(0),
         )
 
@@ -82,16 +60,14 @@ class MinDoubleValue:
             torch.Tensor: The minimum of the two outputs.
         """
         if target:
-            # Predict the minimum value from the target networks
             with torch.no_grad():
                 pred_1 = self._target_network_1(x)
                 pred_2 = self._target_network_2(x)
                 return torch.min(pred_1, pred_2)
-
-        # Predict the minimum value from the online networks
-        pred_1 = self._online_network_1(x)
-        pred_2 = self._online_network_2(x)
-        return torch.min(pred_1, pred_2)
+        else:
+            pred_1 = self._online_network_1(x)
+            pred_2 = self._online_network_2(x)
+            return torch.min(pred_1, pred_2)
 
     def optimize(self, loss: torch.Tensor, step: int) -> None:
         """Optimizes both networks with respect to the given loss.
@@ -100,10 +76,7 @@ class MinDoubleValue:
             loss (torch.Tensor): The loss to backpropagate.
             step (int): The current optimization step.
         """
-        # Update the learning rate for both optimizers
         self._learning_rate.adjust(self._optimizer, step)
-
-        # Optimize both networks
         self._optimizer.zero_grad()
         loss.backward()
         torch.nn.utils.clip_grad_norm_(
@@ -112,35 +85,26 @@ class MinDoubleValue:
             max_norm=self._gradient_clipping,
         )
         self._optimizer.step()
-
-        # Update the target networks
         self._update_target_network()
-
-        # Log learning rate and gradients
-        Logger.log_scalar(
-            "min_double_value/learning_rate", self._learning_rate.value(step)
-        )
 
         avg_gradient_1 = 0
         for param in self._online_network_1.parameters():
             avg_gradient_1 += param.grad.abs().mean()
         avg_gradient_1 /= len(list(self._online_network_1.parameters()))
-        Logger.log_scalar("min_double_value/gradient_1", avg_gradient_1)
 
         avg_gradient_2 = 0
         for param in self._online_network_2.parameters():
             avg_gradient_2 += param.grad.abs().mean()
         avg_gradient_2 /= len(list(self._online_network_2.parameters()))
+
+        Logger.log_scalar("min_double_value/gradient_1", avg_gradient_1)
+        Logger.log_scalar("min_double_value/learning_rate", self._learning_rate.value(step))
         Logger.log_scalar("min_double_value/gradient_2", avg_gradient_2)
 
     def _update_target_network(self) -> None:
         """Updates the target networks with a weighted average of online networks' parameters."""
-        self._update_target_network_params(
-            self._target_network_1, self._online_network_1
-        )
-        self._update_target_network_params(
-            self._target_network_2, self._online_network_2
-        )
+        self._update_target_network_params(self._target_network_1, self._online_network_1)
+        self._update_target_network_params(self._target_network_2, self._online_network_2)
 
     def _update_target_network_params(
         self, target_network: MLP, online_network: MLP
@@ -154,10 +118,7 @@ class MinDoubleValue:
         target_state_dict = target_network.state_dict()
         online_state_dict = online_network.state_dict()
         for key in target_state_dict:
-            target_state_dict[key] = (
-                self._transition_rate * online_state_dict[key]
-                + (1 - self._transition_rate) * target_state_dict[key]
-            )
+            target_state_dict[key] = self._transition_rate*online_state_dict[key] + (1-self._transition_rate)*target_state_dict[key]
         target_network.load_state_dict(target_state_dict)
 
     def _copy_online_to_target(self) -> None:

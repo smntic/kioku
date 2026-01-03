@@ -14,14 +14,6 @@ class DoorEnvironment(Environment):
         observation_size (int | tuple[int, int, int]): The dimensionality of the observation space.
         continuous (bool): Whether the action space is continuous. Always False for this
             environment.
-        _num_doors (int): The number of doors in the environment.
-        _flash_steps (int): The number of steps during which the correct door is flashed.
-        _reward_delay (int): The number of steps to wait before the agent can receive a reward for
-            choosing the correct door.
-        _print_observation (bool): If True, prints the observation at each step.
-        _max_steps (int): The maximum number of steps allowed in an episode.
-        _chosen_door (int): The door chosen by the environment to be correct.
-        _step (int): The current step number within the episode.
     """
 
     def __init__(
@@ -60,7 +52,6 @@ class DoorEnvironment(Environment):
         observation = np.zeros(self._num_doors, dtype=np.float32)
         observation[self._chosen_door] = 1
 
-        # Print the observation if enabled
         if self._print_observation:
             print(f"observation: {observation}")
 
@@ -84,16 +75,13 @@ class DoorEnvironment(Environment):
         """
         self._step += 1
 
-        # Update the observation
         observation = np.zeros(self._num_doors, dtype=np.float32)
         if self._step < self._flash_steps:
             observation[self._chosen_door] = 1
 
-        # Print the observation if enabled
         if self._print_observation:
             print(f"observation: {observation}, action: {action}")
 
-        # Determine reward
         reward = np.array([0], dtype=np.float32)
         chosen_door = action.item()
         if chosen_door != 0:
@@ -105,7 +93,6 @@ class DoorEnvironment(Environment):
             else:
                 reward -= 1
 
-        # Check if the episode is done or truncated
         done = np.array([0], dtype=bool)
         truncated = np.array([int(self._step >= self._max_steps)], dtype=bool)
 

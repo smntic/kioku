@@ -1,9 +1,3 @@
-"""
-gym_environment.py
-
-Provides a wrapper for the a gymnasium environment to be interacted with by an agent.
-"""
-
 from environments import Environment
 import gymnasium as gym
 import numpy as np
@@ -16,7 +10,6 @@ class GymEnvironment(Environment):
         action_size (int): The number of actions that can be taken.
         observation_size (int | tuple[int, int, int]): The dimension of the observation space.
         continuous (bool): Whether the environment has a continuous action space.
-        _environment (gym.Env): The gymnasium environment.
     """
 
     def __init__(self, environment_name: str, render_mode: str | None = None) -> None:
@@ -34,18 +27,15 @@ class GymEnvironment(Environment):
         Returns:
             np.ndarray: The initial state of the environment.
         """
-        # Seed the environment
         random_seed = np.random.randint(0, 2**32)
         observation, _ = self._environment.reset(seed=random_seed)
         return observation
 
-    def step(
-        self, action: np.ndarray
-    ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    def step(self, action: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """Takes a step in the environment.
 
         Args:
-            action (int): The action to take.
+            action (np.ndarray): The action to take.
 
         Returns:
             tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]: A tuple containing:
@@ -54,17 +44,11 @@ class GymEnvironment(Environment):
                 - Whether the episode is done (np.ndarray),
                 - Whether the episode was truncated (np.ndarray).
         """
-        # Retrieve the action from the numpy array
         action = action.item()
-
-        # Take a step in the environment
         observation, reward, done, truncated, _ = self._environment.step(action)
-
-        # Convert all the values to numpy arrays
         reward = np.array([reward], dtype=np.float32)
         done = np.array([done], dtype=bool)
         truncated = np.array([truncated], dtype=bool)
-
         return observation, reward, done, truncated
 
     @property
