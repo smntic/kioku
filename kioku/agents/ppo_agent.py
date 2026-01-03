@@ -253,7 +253,7 @@ class PPOAgent(Agent):
 
                 entropy_loss = self._entropy_coefficient * -new_action_entropy.mean()
                 actor_loss = -torch.min(
-                    new_action_log_prob * advantage, clipped_ratio * advantage
+                    ratio * advantage, clipped_ratio * advantage
                 ).mean()
                 actor_loss = actor_loss - entropy_loss
 
