@@ -1,9 +1,9 @@
-from agents import Agent
-from utils import Transition
-from memory import PrioritizedExperienceReplayBuffer
-from functions import DoubleValue
-from schedulers import Scheduler, ExponentialDecayScheduler, StaticScheduler
-from loggers import Logger
+from kioku.agents import Agent
+from kioku.utils import Transition
+from kioku.memory import PrioritizedExperienceReplayBuffer
+from kioku.functions import DoubleValue
+from kioku.schedulers import Scheduler, ExponentialDecayScheduler, StaticScheduler
+from kioku.loggers import Logger
 import torch
 import numpy as np
 

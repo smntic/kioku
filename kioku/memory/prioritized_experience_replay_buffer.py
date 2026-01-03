@@ -1,6 +1,6 @@
-from schedulers import Scheduler, ExponentialDecayScheduler
-from utils import Transition
-from loggers import Logger
+from kioku.schedulers import Scheduler, ExponentialDecayScheduler
+from kioku.utils import Transition
+from kioku.loggers import Logger
 import numpy as np
 
 

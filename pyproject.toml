@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "kioku-rl"
-version = "0.1.0"
+version = "0.1.1"
 description = "Cognitive science-inspired reinforcement learning research library"
 readme = "README.md"
 license = { file = "LICENSE" }

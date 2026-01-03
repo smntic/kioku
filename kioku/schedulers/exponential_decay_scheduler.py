@@ -1,4 +1,4 @@
-from schedulers import Scheduler
+from kioku.schedulers import Scheduler
 
 
 class ExponentialDecayScheduler(Scheduler):

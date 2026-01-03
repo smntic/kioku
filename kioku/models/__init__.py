@@ -1,4 +1,4 @@
-from models.mlp import MLP
-from models.rnn import RNN
+from .mlp import MLP
+from .rnn import RNN
 
 __all__ = ["MLP", "RNN"]

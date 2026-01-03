@@ -1,7 +1,7 @@
-from models import MLP
-from schedulers import Scheduler, StaticScheduler
-from utils import DEVICE
-from loggers import Logger
+from kioku.models import MLP
+from kioku.schedulers import Scheduler, StaticScheduler
+from kioku.utils import DEVICE
+from kioku.loggers import Logger
 import torch
 from torch.distributions import Categorical
 import numpy as np

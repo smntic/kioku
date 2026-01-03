@@ -1,4 +1,4 @@
-from environments import Environment
+from kioku.environments import Environment
 import gymnasium as gym
 import numpy as np
 

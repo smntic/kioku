@@ -1,6 +1,6 @@
 import numpy as np
 import cv2
-from environments import Environment, GymEnvironment
+from kioku.environments import Environment, GymEnvironment
 
 
 class VisualGymEnvironment(Environment):

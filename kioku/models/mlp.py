@@ -1,4 +1,4 @@
-from utils import DEVICE
+from kioku.utils import DEVICE
 import torch
 import torch.nn.functional as F
 from torch import nn

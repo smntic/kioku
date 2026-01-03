@@ -1,8 +1,8 @@
-from agents import Agent
-from environments import Environment
-from utils import Transition
-from loggers import Logger
 from typing import Any
+from kioku.agents import Agent
+from kioku.environments import Environment
+from kioku.utils import Transition
+from kioku.loggers import Logger
 
 
 class Trainer:

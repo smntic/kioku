@@ -1,9 +1,9 @@
-from agents import Agent
-from memory import NStepBuffer
-from functions import DiscreteActor, Value
-from schedulers import Scheduler, StaticScheduler
-from utils import Transition, DEVICE
-from loggers import Logger
+from kioku.agents import Agent
+from kioku.memory import NStepBuffer
+from kioku.functions import DiscreteActor, Value
+from kioku.schedulers import Scheduler, StaticScheduler
+from kioku.utils import Transition, DEVICE
+from kioku.loggers import Logger
 import torch
 import torch.nn.functional as F
 import numpy as np

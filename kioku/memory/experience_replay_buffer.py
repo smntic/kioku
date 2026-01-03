@@ -1,5 +1,5 @@
-from utils import Transition
-from loggers import Logger
+from kioku.utils import Transition
+from kioku.loggers import Logger
 import numpy as np
 
 

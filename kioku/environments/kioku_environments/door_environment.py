@@ -1,5 +1,5 @@
 import numpy as np
-from environments import Environment
+from kioku.environments import Environment
 
 
 class DoorEnvironment(Environment):

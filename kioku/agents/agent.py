@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 import numpy as np
-from utils import Transition
+from kioku.utils import Transition
 
 
 class Agent(ABC):
